@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-annotator
+  namespace: {YOUR_NAMESPACE}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pod-annotator
+  template:
+    metadata:
+      labels:
+        app: pod-annotator
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+      containers:
+      - name: pod-annotator
+        imagePullPolicy: Always
+        image: {DOCKER_IMAGE}
+        ports:
+        - name: app
+          containerPort: 3000
+      nodeSelector:
+        eks.amazonaws.com/nodegroup: fixed-nodes
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-annotator-role
+roleRef:
+  kind: Role
+  name: annotate-pod-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: annotate-pod-role
+  # "namespace" omitted if was ClusterRoles because are not namespaced
+  namespace: {YOUR_NAMESPACE}
+  labels:
+    k8s-app: pod-annotator
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs:
+  - create
+  - update
+  - patch
+  - get
+  - watch
+  - list
